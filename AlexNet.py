@@ -35,3 +35,64 @@ class_names = train_dataset.classes
 
 class_names = train_dataset.classes
 class_counts = Counter([label for _, label in train_dataset])
+
+# split the dataset into training and validation sets(80-20 split)
+
+train_size = int(0.8*len(train_dataset))
+val_size = len(train_dataset) - train_size
+train_data, val_data = torch.utils.data.random_split(
+    train_dataset, [train_size, val_size])
+
+# Create data loaders
+batch_size = 32
+train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(val_data, batch_size=batch_size)
+
+
+class AlexNet(nn.Module):
+    def __init__(self):
+        super(AlexNet, self).__init__()
+        # Image input_size=(3, 227, 227)
+        self.layers = nn.Sequential(
+            # input_size=(96, 55, 55)
+            nn.Conv2d(in_channels=3, out_channels=96,
+                      kernel_size=(11, 11), stride=4, padding=0),
+            nn.ReLU(),
+            # input_size=(96, 27, 27)
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            # input_size=(256, 27, 27)
+            nn.Conv2d(in_channels=96, out_channels=256,
+                      kernel_size=(5, 5), stride=1, padding=2),
+            nn.ReLU(),
+            # input_size=(256, 13, 13)
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            # input_size=(384, 13, 13)
+            nn.Conv2d(in_channels=256, out_channels=384,
+                      kernel_size=(3, 3), stride=1, padding=1),
+            nn.ReLU(),
+            # input_size=(384, 13, 13)
+            nn.Conv2d(in_channels=384, out_channels=384,
+                      kernel_size=(3, 3), stride=1, padding=1),
+            nn.ReLU(),
+            # input_size=(256, 13, 13)
+            nn.Conv2d(in_channels=384, out_channels=256,
+                      kernel_size=(3, 3), stride=1, padding=1),
+            nn.ReLU(),
+            # input_size=(256, 6, 6)
+            nn.MaxPool2d(kernel_size=3, stride=2),
+        )
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=0.5),
+            nn.Linear(in_features=256*6*6, out_features=4096),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(in_features=4096, out_features=4096),
+            nn.ReLU(),
+            nn.Linear(in_features=4096, out_features=4),
+        )
+
+    def forward(self, x):
+        x = self.layers(x)
+        x = x.view(-1, 256*6*6)
+        x = self.classifier(x)
+        return x
